@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- <script src="jquery-1.11.3.js"></script>
+    <script src="jquery.csv-0.71.js"></script> -->
+    <script src="revenuePerApp.js"></script>
+    <style>
+      #holder { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
+      #holder.hover { border: 10px dashed #333; }
+    </style>
+    <script>
+
+      //Same as $(document).ready();
+      function ready(fn) {
+        if (document.readyState != 'loading'){
+          fn();
+        } else {
+          document.addEventListener('DOMContentLoaded', fn);
+        }
+      }
+
+      //When the page has loaded, run this code
+      ready(function(){
+        // prevent default behavior from changing page on dropped file
+        window.ondragover = function(e) { e.preventDefault(); return false };
+        window.ondrop = function(e) { e.preventDefault(); return false };
+
+        var holder = document.getElementById('holder');
+        holder.ondragover = function () { this.className = 'hover'; return false; };
+        holder.ondragleave = function () { this.className = ''; return false; };
+        holder.ondrop = function (e) {
+          e.preventDefault();
+
+          for (var i = 0; i < e.dataTransfer.files.length; ++i) {
+            console.log(e.dataTransfer.files[i].path);
+            revenuePerApp.processFile(e.dataTransfer.files[i].path);
+          }
+          return false;
+        };
+      });
+  </script>
+  </head>
+  <body>
+    <div id="holder">Drop your files</div>
+  </body>
+</html>
