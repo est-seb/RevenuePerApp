@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <!-- <script src="jquery-1.11.3.js"></script>
-    <script src="jquery.csv-0.71.js"></script> -->
     <script src="revenuePerApp.js"></script>
     <style>
       #holder { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
@@ -31,8 +29,8 @@
         holder.ondrop = function (e) {
           e.preventDefault();
 
+          nbFiles = e.dataTransfer.files.length;
           for (var i = 0; i < e.dataTransfer.files.length; ++i) {
-            console.log(e.dataTransfer.files[i].path);
             revenuePerApp.processFile(e.dataTransfer.files[i].path);
           }
           return false;
@@ -42,5 +40,6 @@
   </head>
   <body>
     <div id="holder">Drop your files</div>
+    <div id="results" style="display: none;"></div>
   </body>
 </html>
