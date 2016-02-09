@@ -5,7 +5,10 @@ The program is composed of **Index.html** and **revenuePerApp.js**, they both ha
 
 ##To Use
 
-Create a file containing the **currency rates** related to your earnings (rates given at iTunesConnect->Payments and financial reports-> payments, this file name must contain "currency_rate") and drop it with your **earnings reports** (from iTunesConnect->Payments and financial reports-> earnings) in the browser window displaying index.html.
+- Create a file containing the **currency rates** related to your earnings (rates given at iTunesConnect->Payments and financial reports-> payments, this file name must contain "currency_rate")
+- Gather your **earnings reports** (from iTunesConnect->Payments and financial reports-> earnings)
+- Drop the earnings and currency rates files in the browser window displaying index.html.
+- Check the results at the bottom of the page
 
 My suggestion to get an easy Node.JS server up and running as a desktop app (using **Electron**):
 ```
@@ -22,3 +25,6 @@ cp ../RevenuePerApp/index.html ../RevenuePerApp/revenuePerApp.js .
 # Run electron
 npm start
 ```
+
+##Currency rate file (CSV format, sample in the repository)
+Currency code;currency rate;withholding tax(if any);beginning balance(if any)
