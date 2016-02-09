@@ -1,12 +1,18 @@
 "use strict";
 var fs = require('fs');
 
+var currencyRateFileFound = false;
 var nbFiles = 0;
 var nbFilesProcessed = 0;
 var currencyCode_AppLocalCurrency = {};
 var currencyCode_AppTargetedCurrency = {};
 var currencyCode_currencyRate = {};
 var app_TargetedCurrencyTotal = {};
+
+var beginningBalanceMap = {};
+var withholdingTaxMap = {};
+
+var NO_CURRENCY_RATE_FILE_FOUND = "No currency rate file found.";
 
 var revenuePerApp = {
   processFile : function(filePath){
@@ -15,18 +21,29 @@ var revenuePerApp = {
         if (err) {
           return console.log(err);
         }
-
+        var fileNameCountryCode = filePath.substring(filePath.length-6, filePath.length-4);
+        //Transform text to an array of lines
         var arrayOfLines = revenuePerApp.getArrayOfLines(data);
         var line = "";
         var arrayOfStrings = [];
         var app_LocalCurrencyShareMap = {};
 
         if (filePath.toUpperCase().indexOf("currency_rate".toUpperCase())>-1) {
+          currencyRateFileFound = true;
           //Currency rate loading
           for (var i = 0; i < arrayOfLines.length; i++) {
               line = arrayOfLines[i];
               arrayOfStrings = line.split(";");
               currencyCode_currencyRate[arrayOfStrings[0]] = parseFloat(arrayOfStrings[1]);
+              //Special case : Withholding tax and beginning balance
+              if (arrayOfStrings.length>2) {
+                if (arrayOfStrings[2]!="") {
+                    withholdingTaxMap[arrayOfStrings[0]] = arrayOfStrings[2];
+                }
+                if (arrayOfStrings.length==4 && arrayOfStrings[3]!="") {
+                  beginningBalanceMap[arrayOfStrings[0]] = arrayOfStrings[3];
+                }
+              }
           }
 
         } else {
@@ -35,7 +52,6 @@ var revenuePerApp = {
           var appName = "";
           var extendedPartnerShare = 0;
           var localCurrencyCode = "";
-          var countryCode = "";
 
           for (var i = 0; i < arrayOfLines.length; i++) {
             if (i==0) {
@@ -48,11 +64,6 @@ var revenuePerApp = {
                 appName = arrayOfStrings[12];
                 extendedPartnerShare = parseFloat(arrayOfStrings[7]);
                 localCurrencyCode = arrayOfStrings[8];
-                countryCode = arrayOfStrings[17];
-                // console.log("Country code : "+countryCode);
-                // console.log("App name : "+appName);
-                // console.log("Extended partner share : "+extendedPartnerShare);
-                // console.log("Currency : "+localCurrencyCode);
                 if (app_LocalCurrencyShareMap.hasOwnProperty(appName)) {
                   // console.log(appName+" deja dans la map");
                   app_LocalCurrencyShareMap[appName] = parseFloat(app_LocalCurrencyShareMap[appName]) + parseFloat(extendedPartnerShare);
@@ -60,7 +71,32 @@ var revenuePerApp = {
                 } else {
                   app_LocalCurrencyShareMap[appName] = extendedPartnerShare;
                 }
+                console.log(localCurrencyCode + " " + appName + " " + app_LocalCurrencyShareMap[appName]);
               }
+            }
+          }
+
+          //Special case of USD-ROW
+          if (localCurrencyCode==="USD" && fileNameCountryCode!=="US") {
+            localCurrencyCode = "USD-ROW";
+          }
+
+          if (withholdingTaxMap!={} || beginningBalanceMap!={}) {
+            for (var appName in app_LocalCurrencyShareMap) {
+              if (app_LocalCurrencyShareMap.hasOwnProperty(appName)) {
+                //Withholding tax
+                if (withholdingTaxMap!={} && withholdingTaxMap.hasOwnProperty(localCurrencyCode)){
+                  app_LocalCurrencyShareMap[appName] = app_LocalCurrencyShareMap[appName] + withholdingTaxMap[localCurrencyCode];
+                  console.log("Withholding tax : "+app_LocalCurrencyShareMap[appName]);
+                }
+                //beginning balance
+                if (beginningBalanceMap!={} && beginningBalanceMap.hasOwnProperty(localCurrencyCode)){
+                  app_LocalCurrencyShareMap[appName] = app_LocalCurrencyShareMap[appName] + beginningBalanceMap[localCurrencyCode];
+                  console.log("Beginning balance : "+app_LocalCurrencyShareMap[appName]);
+                }
+              }
+              //Do tax or balance only on the 1st element
+              break;
             }
           }
 
@@ -81,6 +117,7 @@ var revenuePerApp = {
                 if (app_LocalCurrencyShareMap.hasOwnProperty(appName)) {
                   //Get currency rate according to currency code
                   var rate = parseFloat(currencyCode_currencyRate[currencyCode]);
+
                   var shareInTargetedCurrency = parseFloat(app_LocalCurrencyShareMap[appName]) * rate;
                   app_TargetCurrencyShareMap[appName] = shareInTargetedCurrency;
 
@@ -101,15 +138,25 @@ var revenuePerApp = {
 
           //display results
           var resultsText = "<p>Total revenue per app : </p>";
+          var totalRevenue = 0;
+          var revenueOfOneApp = 0;
           for (var appName in app_TargetedCurrencyTotal) {
             if (app_TargetedCurrencyTotal.hasOwnProperty(appName)) {
-              resultsText = resultsText + appName + " : " + app_TargetedCurrencyTotal[appName] + "\n";
+              revenueOfOneApp = parseFloat(app_TargetedCurrencyTotal[appName]);
+              //Round up at 2 decimals
+              revenueOfOneApp = Math.round(revenueOfOneApp * 100)/100;
+              resultsText = resultsText + appName + " : " + revenueOfOneApp + "</BR>";
+              totalRevenue = Math.round((parseFloat(totalRevenue) + parseFloat(revenueOfOneApp)) * 100)/100;
             }
           }
+          resultsText = resultsText + "<p>Total Revenue For This Month : " + totalRevenue + "</p>"
           document.getElementById("results").innerHTML = resultsText;
           document.getElementById("results").style.display = 'block';
-          // console.log(currencyCode_AppTargetedCurrency);
-          // console.log(app_TargetedCurrencyTotal);
+          console.log(currencyCode_AppTargetedCurrency);
+          console.log(app_TargetedCurrencyTotal);
+        } else {
+          document.getElementById("results").innerHTML = NO_CURRENCY_RATE_FILE_FOUND;
+          document.getElementById("results").style.display = 'block';
         }
     });
   },
